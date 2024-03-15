@@ -5,9 +5,11 @@ float RateRoll, RatePitch, RateYaw;
 float AccX,AccY,AccZ;
 float AngleRoll, AnglePitch;
 
+float PrevAccX, PrevAccY, PrevAccZ; // Variables to store previous accelerometer readings
+
 float LoopTimer;
 
-void gyro_signals(void) {
+void gyro_update(void) {
   // EN lowpass filter
   Wire.beginTransmission(0x68);
   Wire.write(0x1A);
@@ -54,6 +56,11 @@ void gyro_signals(void) {
   // Around y
   Serial.print(" Pitch [°] = ");
   Serial.println(AnglePitch);
+  
+  // Store current accelerometer readings for next iteration
+  PrevAccX = AccX;
+  PrevAccY = AccY;
+  PrevAccZ = AccZ;
 }
 
 void setup() {
@@ -68,29 +75,26 @@ void setup() {
 }
 
 void loop() {
-  gyro_signals();
-  // Serial.print("Acc X [g]= ");
-  // Serial.print(AccX);
-  // Serial.print(" Acc Y [g] = ");
-  // Serial.print(AccY);
-  // Serial.print(" Acc Z [g] = ");
-  // Serial.println(AccZ);
-
-  // Around x
-  Serial.print("Roll [°] = ");
-  Serial.print(AngleRoll);
-  // Around y
-  Serial.print(" Pitch [°] = ");
-  Serial.println(AnglePitch);
+  gyro_update();
   
-
   // Check if orientation is unsafe
   if (abs(AngleRoll) > 45 || abs(AnglePitch) > 45 || AccZ < -0.7) {
     Serial.println("Orientation Unsafe!"); 
     // tone(15, 1000, 5);
   }
 
+  // Detect collision
+  float accChangeX = abs(AccX - PrevAccX);
+  float accChangeY = abs(AccY - PrevAccY);
+  float accChangeZ = abs(AccZ - PrevAccZ);
+  
+  // Set a threshold for collision detection
+  float collisionThreshold = 2.0; // Adjust this value as needed
+  
+  if (accChangeX > collisionThreshold || accChangeY > collisionThreshold || accChangeZ > collisionThreshold) {
+    Serial.println("Collision Detected!");
+    // Perform actions when collision is detected
+  }
+
   delay(50);
 }
-
-
