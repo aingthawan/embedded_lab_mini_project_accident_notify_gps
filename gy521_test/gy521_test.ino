@@ -127,9 +127,9 @@ void loop() {
   kalman_1d(KalmanAnglePitch, KalmanUncertaintyAnglePitch, RatePitch, AnglePitch);
   KalmanAnglePitch=Kalman1DOutput[0]; 
   KalmanUncertaintyAnglePitch=Kalman1DOutput[1];
-  Serial.print("Roll Angle : ");
+  Serial.print("Roll Angle = ");
   Serial.print(KalmanAngleRoll);
-  Serial.print(" Pitch Angle : ");
+  Serial.print(" , Pitch Angle = ");
   Serial.println(KalmanAnglePitch);
   while (micros() - LoopTimer < 4000);
   LoopTimer=micros();
