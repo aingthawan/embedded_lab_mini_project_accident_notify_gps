@@ -1,5 +1,7 @@
 #include "gyro_and_gps.h"
+#include "secret.h"
 #include <Wire.h>
+
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 // Disable PROGMEM because the ESP8266WiFi library,
@@ -36,23 +38,28 @@
 #include <ThingsBoard.h>
 #endif
 
+// Define Sensitive Variable from separate file
+#define SSID        secretSSID
+#define PASSWORD    secretPass
+#define LINE_TOKEN  secretTokenLine
+#define THINGSBOARD_TOKEN  secretTokenThingsBoard
 
 // PROGMEM can only be added when using the ESP32 WiFiClient,
 // will cause a crash if using the ESP8266WiFiSTAClass instead.
 #if THINGSBOARD_ENABLE_PROGMEM
-constexpr char WIFI_SSID[] PROGMEM = "Koonpoy";
-constexpr char WIFI_PASSWORD[] PROGMEM = "Koonpoych123";
+constexpr char WIFI_SSID[] PROGMEM = SSID;
+constexpr char WIFI_PASSWORD[] PROGMEM = PASSWORD;
 #else
-constexpr char WIFI_SSID[] = "Koonpoy";
-constexpr char WIFI_PASSWORD[] = "Koonpoych123";
+constexpr char WIFI_SSID[] = SSID;
+constexpr char WIFI_PASSWORD[] = PASSWORD;
 #endif
 
 // See https://thingsboard.io/docs/getting-started-guides/helloworld/
 // to understand how to obtain an access token
 #if THINGSBOARD_ENABLE_PROGMEM
-constexpr char TOKEN[] PROGMEM = "PmF4kYjDGYEBRK0FwNwD";
+constexpr char TOKEN[] PROGMEM = THINGSBOARD_TOKEN;
 #else
-constexpr char TOKEN[] = "PmF4kYjDGYEBRK0FwNwD";
+constexpr char TOKEN[] = THINGSBOARD_TOKEN;
 #endif
 
 // Thingsboard we want to establish a connection too
