@@ -10,7 +10,7 @@ float AngleRoll, AnglePitch;
 float LoopTimer;
 static const int RXPin = 4, TXPin = 5;
 static const uint32_t GPSBaud = 9600;
-long LateLat, LateLn;
+double LateLat, LateLn;
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
@@ -68,10 +68,12 @@ void readGPSData() {
   while (updated != 1) {
     while (ss.available() > 0) {
       gps.encode(ss.read());
-      Serial.println("Is gps updated ");
+      // Serial.println("Is gps updated ");
       if (gps.location.isUpdated()) {
         LateLat = gps.location.lat();
         LateLn = gps.location.lng();
+        // Serial.println(LateLat, 6);
+        // Serial.println(LateLn, 6);
         updated = 1;
         Serial.println("gps was updated ");
       }

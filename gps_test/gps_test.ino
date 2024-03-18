@@ -3,6 +3,7 @@
 
 static const int RXPin = 4, TXPin = 5;
 static const uint32_t GPSBaud = 9600;
+double lat, ln;
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
@@ -11,7 +12,8 @@ TinyGPSPlus gps;
 SoftwareSerial ss(RXPin, TXPin);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial.println("Testing GPS Start");
   ss.begin(GPSBaud);
 }
 
@@ -25,9 +27,16 @@ void readGPSData() {
         // Latitude in degrees (double)
         Serial.print("Latitude= ");
         Serial.print(gps.location.lat(), 6);
+        Serial.print(" ");
+        lat = gps.location.lat();
+        Serial.print(lat);
+        
         // Longitude in degrees (double)
         Serial.print(" Longitude= ");
         Serial.print(gps.location.lng(), 6);
+        Serial.print(" ");
+        ln = gps.location.lng();
+        Serial.print(ln);
 
         // Raw date in DDMMYY format (u32)
         Serial.print(" Raw date DDMMYY = ");
@@ -54,5 +63,5 @@ void readGPSData() {
 void loop() {
   // Call the function to read GPS data
   readGPSData();
-  delay(10000);
+  // delay(10);
 }

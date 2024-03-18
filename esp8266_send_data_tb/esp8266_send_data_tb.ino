@@ -1,5 +1,5 @@
+#include "secret_variable.h"
 #include "gyro_and_gps.h"
-#include "secret.h"
 #include <Wire.h>
 
 #ifdef ESP8266
@@ -38,29 +38,30 @@
 #include <ThingsBoard.h>
 #endif
 
-// Define Sensitive Variable from separate file
-#define SSID        secretSSID
-#define PASSWORD    secretPass
+#define WIFI_SSID        secretSSID
+#define WIFI_PASSWORD    secretPass
 #define LINE_TOKEN  secretTokenLine
-#define THINGSBOARD_TOKEN  secretTokenThingsBoard
+#define THINGS_TOKEN  secretThingsBoard
+
+
 
 // PROGMEM can only be added when using the ESP32 WiFiClient,
 // will cause a crash if using the ESP8266WiFiSTAClass instead.
-#if THINGSBOARD_ENABLE_PROGMEM
-constexpr char WIFI_SSID[] PROGMEM = SSID;
-constexpr char WIFI_PASSWORD[] PROGMEM = PASSWORD;
-#else
-constexpr char WIFI_SSID[] = SSID;
-constexpr char WIFI_PASSWORD[] = PASSWORD;
-#endif
+// #if THINGSBOARD_ENABLE_PROGMEM
+// constexpr char WIFI_SSID[] PROGMEM = secretSSID;
+// constexpr char WIFI_PASSWORD[] PROGMEM = secretPass;
+// #else
+// constexpr char WIFI_SSID[] = secretSSID;
+// constexpr char WIFI_PASSWORD[] = secretPass;
+// #endif
 
 // See https://thingsboard.io/docs/getting-started-guides/helloworld/
 // to understand how to obtain an access token
-#if THINGSBOARD_ENABLE_PROGMEM
-constexpr char TOKEN[] PROGMEM = THINGSBOARD_TOKEN;
-#else
-constexpr char TOKEN[] = THINGSBOARD_TOKEN;
-#endif
+// #if THINGSBOARD_ENABLE_PROGMEM
+// constexpr char TOKEN[] PROGMEM = THINGS_TOKEN;
+// #else
+// constexpr char TOKEN[] = THINGS_TOKEN;
+// #endif
 
 // Thingsboard we want to establish a connection too
 #if THINGSBOARD_ENABLE_PROGMEM
@@ -195,9 +196,13 @@ emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=
 #if THINGSBOARD_ENABLE_PROGMEM
 constexpr char ANGLEPITCH_KEY[] PROGMEM = "anglepitch";
 constexpr char ANGLEROLL_KEY[] PROGMEM = "angleroll";
+constexpr char LATELAT_KEY[] PROGMEM = "latitude";
+constexpr char LATELN_KEY[] PROGMEM = "longitude";
 #else
 constexpr char ANGLEPITCH_KEY[] = "anglepitch";
 constexpr char ANGLEROLL_KEY[] = "angleroll";
+constexpr char LATELAT_KEY[] = "latitude";
+constexpr char LATELN_KEY[] = "longitude";
 #endif
 
 
@@ -211,7 +216,7 @@ WiFiClient espClient;
 Arduino_MQTT_Client mqttClient(espClient);
 // Initialize ThingsBoard instance with the maximum needed buffer size
 #if USING_HTTPS
-ThingsBoardHttp tb(mqttClient, TOKEN, THINGSBOARD_SERVER, THINGSBOARD_PORT);
+ThingsBoardHttp tb(mqttClient, THINGS_TOKEN, THINGSBOARD_SERVER, THINGSBOARD_PORT);
 #else
 ThingsBoard tb(mqttClient, MAX_MESSAGE_SIZE);
 #endif
@@ -260,6 +265,20 @@ bool reconnect() {
   return true;
 }
 
+void sendTelemetry(const char* label, const char* key, float data) {
+  #if THINGSBOARD_ENABLE_PROGMEM
+    Serial.print(F("Sending "));
+    Serial.print(label);
+    Serial.println(F(" data..."));
+  #else
+    Serial.print("Sending ");
+    Serial.print(label);
+    Serial.println(" data...");
+  #endif
+  tb.sendTelemetryData(key, data);
+}
+
+
 void setup() {
   // If analog input pin 0 is unconnected, random analog
   // noise will cause the call to randomSeed() to generate
@@ -278,62 +297,88 @@ void setup() {
   Wire.endTransmission();
 }
 
+
+extern float AngleRoll,AnglePitch;
+extern double LateLat, LateLn;
+
+
 void loop() {
-  delay(1000);
-
-  
-
-  if (!reconnect()) {
-    return;
-  }
-
-#if !USING_HTTPS
-  if (!tb.connected()) {
-    // Reconnect to the ThingsBoard server,
-    // if a connection was disrupted or has not yet been established
-    Serial.printf("Connecting to: (%s) with token (%s)\n", THINGSBOARD_SERVER, TOKEN);
-    if (!tb.connect(THINGSBOARD_SERVER, TOKEN, THINGSBOARD_PORT)) {
-#if THINGSBOARD_ENABLE_PROGMEM
-      Serial.println(F("Failed to connect"));
-#else
-      Serial.println("Failed to connect");
-#endif
-      return;
-    }
-  }
-#endif
-
-  extern float AngleRoll,AnglePitch;
-  extern long LateLat, LateLn;
   gyro_signals();
   readGPSData();
+
+    if (!reconnect()) {
+      return;
+    }
+
+  #if !USING_HTTPS
+    if (!tb.connected()) {
+      // Reconnect to the ThingsBoard server,
+      // if a connection was disrupted or has not yet been established
+      Serial.printf("Connecting to: (%s) with token (%s)\n", THINGSBOARD_SERVER, THINGS_TOKEN);
+      if (!tb.connect(THINGSBOARD_SERVER, THINGS_TOKEN, THINGSBOARD_PORT)) {
+  #if THINGSBOARD_ENABLE_PROGMEM
+        Serial.println(F("Failed to connect"));
+  #else
+        Serial.println("Failed to connect");
+  #endif
+        return;
+      }
+    }
+  #endif
   
-  
-  // Uploads new telemetry to ThingsBoard using HTTP.
-  // See https://thingsboard.io/docs/reference/http-api/#telemetry-upload-api
-  // for more details
-#if THINGSBOARD_ENABLE_PROGMEM
-  Serial.println(F("Sending temperature data..."));
-#else
-  Serial.println("Sending temperature data...");
-#endif
-  tb.sendTelemetryData(ANGLEROLL_KEY, AngleRoll);
+  // debugging
+  // Serial.println(sizeof(AnglePitch));
+  // Serial.println(sizeof(AnglePitch));
+  // Serial.println(sizeof(LateLat));
+  // Serial.println(sizeof(LateLn));
 
-#if THINGSBOARD_ENABLE_PROGMEM
-  Serial.println(F("Sending temperature data..."));
-#else
-  Serial.println("Sending temperature data...");
-#endif
-  tb.sendTelemetryData(ANGLEPITCH_KEY, AnglePitch);  
+    // Uploads new telemetry to ThingsBoard using HTTP.
+    // See https://thingsboard.io/docs/reference/http-api/#telemetry-upload-api
+    // for more details
+      // References
+      // #if THINGSBOARD_ENABLE_PROGMEM
+      //   Serial.println(F("Sending humidity data..."));
+      // #else
+      //   Serial.println("Sending humidity data...");
+      // #endif
+      //   tb.sendTelemetryData(HUMIDITY_KEY, random(1,30));
 
-// #if THINGSBOARD_ENABLE_PROGMEM
-//   Serial.println(F("Sending humidity data..."));
-// #else
-//   Serial.println("Sending humidity data...");
-// #endif
-//   tb.sendTelemetryData(HUMIDITY_KEY, random(1,30));
+    sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
+    sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
+    sendTelemetry("Lat", LATELAT_KEY, LateLat);
+    sendTelemetry("Long", LATELN_KEY, LateLn);
 
-#if !USING_HTTPS
-  tb.loop();
-#endif
+  // #if THINGSBOARD_ENABLE_PROGMEM
+  //   Serial.println(F("Sending Angle Roll data..."));
+  // #else
+  //   Serial.println("Sending Angle Roll data...");
+  // #endif
+  //   tb.sendTelemetryData(ANGLEROLL_KEY, AngleRoll);
+
+  // #if THINGSBOARD_ENABLE_PROGMEM
+  //   Serial.println(F("Sending Angle Pitch data..."));
+  // #else
+  //   Serial.println("Sending Angle Pitch data...");
+  // #endif
+  //   tb.sendTelemetryData(ANGLEPITCH_KEY, AnglePitch);  
+
+  // #if THINGSBOARD_ENABLE_PROGMEM
+  //   Serial.println(F("Sending Lat data..."));
+  // #else
+  //   Serial.println("Sending Lat data...");
+  // #endif
+  //   tb.sendTelemetryData(LATELAT_KEY, LateLat);
+
+  // #if THINGSBOARD_ENABLE_PROGMEM
+  //   Serial.println(F("Sending Long data..."));
+  // #else
+  //   Serial.println("Sending Long data...");
+  // #endif
+  //   tb.sendTelemetryData(LATELN_KEY, LateLn);
+
+  #if !USING_HTTPS
+    tb.loop();
+  #endif
+
+  delay(10);
 }
