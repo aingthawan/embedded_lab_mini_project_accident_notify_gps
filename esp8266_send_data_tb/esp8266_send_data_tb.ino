@@ -225,30 +225,34 @@ ThingsBoard tb(mqttClient, MAX_MESSAGE_SIZE);
 /// @brief Initalizes WiFi connection,
 // will endlessly delay until a connection has been successfully established
 void InitWiFi() {
-#if THINGSBOARD_ENABLE_PROGMEM
-  Serial.println(F("Connecting to AP ..."));
-#else
-  Serial.println("Connecting to AP ...");
-#endif
+  #if THINGSBOARD_ENABLE_PROGMEM
+    Serial.println(F("Connecting to AP ..."));
+    #else
+      Serial.println("Connecting to AP ...");
+  #endif
+
   // Attempting to establish a connection to the given WiFi network
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(LED_BUILTIN, HIGH);
     // Delay 500ms until a connection has been successfully established
     delay(500);
-#if THINGSBOARD_ENABLE_PROGMEM
-    Serial.print(F("."));
-#else
-    Serial.print(".");
-#endif
-  }
-#if THINGSBOARD_ENABLE_PROGMEM
-  Serial.println(F("Connected to AP"));
-#else
-  Serial.println("Connected to AP");
-#endif
-#if ENCRYPTED
-  espClient.setCACert(ROOT_CERT);
-#endif
+    digitalWrite(LED_BUILTIN, LOW);
+  #if THINGSBOARD_ENABLE_PROGMEM
+      Serial.print(F("."));
+  #else
+      Serial.print(".");
+  #endif
+    }
+
+  #if THINGSBOARD_ENABLE_PROGMEM
+    Serial.println(F("Connected to AP"));
+  #else
+    Serial.println("Connected to AP");
+  #endif
+  #if ENCRYPTED
+    espClient.setCACert(ROOT_CERT);
+  #endif
 }
 
 /// @brief Reconnects the WiFi uses InitWiFi if the connection has been removed
@@ -285,6 +289,8 @@ void setup() {
   // different seed numbers each time the sketch runs.
   // randomSeed() will then shuffle the random function.
   // Initalize serial connection for debugging
+  pinMode(LED_BUILTIN, OUTPUT);
+
   Serial.begin(SERIAL_DEBUG_BAUD);
   delay(1000);
   InitWiFi();
@@ -380,5 +386,5 @@ void loop() {
     tb.loop();
   #endif
 
-  delay(10);
+  delay(200);
 }

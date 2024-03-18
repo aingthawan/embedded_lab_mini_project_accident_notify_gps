@@ -19,6 +19,7 @@ TinyGPSPlus gps;
 SoftwareSerial ss(RXPin, TXPin);
 
 void gyro_signals(void) {
+  Serial.println("Reading Gyroscope");
   // EN lowpass filter
   Wire.beginTransmission(0x68);
   Wire.write(0x1A);
@@ -63,21 +64,44 @@ void gyro_signals(void) {
 
 void readGPSData() {
   // This function reads GPS data once
+  Serial.println("Reading GPS");
   ss.begin(GPSBaud);
   int updated = 0;
-  while (updated != 1) {
+  unsigned long startTime = millis(); // Record the start time
+
+  while (updated != 1 && millis() - startTime < 200) { // Wait for 200ms
     while (ss.available() > 0) {
       gps.encode(ss.read());
-      // Serial.println("Is gps updated ");
       if (gps.location.isUpdated()) {
         LateLat = gps.location.lat();
         LateLn = gps.location.lng();
-        // Serial.println(LateLat, 6);
-        // Serial.println(LateLn, 6);
         updated = 1;
-        Serial.println("gps was updated ");
+        Serial.println("GPS was updated");
+        break; // Exit the inner loop once GPS is updated
       }
     }
   }
+
+  if (updated == 0) {
+    Serial.println("No GPS signal received within 200ms.");
+  }
 }
+
+// void readGPSData() {
+//   // This function reads GPS data once
+//   Serial.println("Reading GPS");
+//   ss.begin(GPSBaud);
+//   int updated = 0;
+//   while (updated != 1) {
+//     while (ss.available() > 0) {
+//       gps.encode(ss.read());
+//       if (gps.location.isUpdated()) {
+//         LateLat = gps.location.lat();
+//         LateLn = gps.location.lng();
+//         updated = 1;
+//         Serial.println("gps was updated ");
+//       }
+//     }
+//   }
+// }
 
