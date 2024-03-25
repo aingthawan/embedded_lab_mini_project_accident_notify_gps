@@ -38,12 +38,20 @@
 #include <ThingsBoard.h>
 #endif
 
-#define WIFI_SSID        secretSSID
-#define WIFI_PASSWORD    secretPass
-#define LINE_TOKEN  secretTokenLine
+// #define WIFI_SSID        secretSSID[]
+// #define WIFI_PASSWORD    secretPass[]
+extern const char* secretSSID[];
+extern const char* secretPass[];
+const int numNetworks = 3; // define num of SSID here plz
+unsigned long lastAttemptTime = 0;
+int currentSSIDIndex = 0;
+
+#define LINE_TOKEN    secretTokenLine
 #define THINGS_TOKEN  secretThingsBoard
 
-
+// Thresholds for unsafe orientation
+const float ROLL_THRESHOLD = 45.0;  // Adjust Here
+const float PITCH_THRESHOLD = 45.0; // Adjust Here
 
 // PROGMEM can only be added when using the ESP32 WiFiClient,
 // will cause a crash if using the ESP8266WiFiSTAClass instead.
@@ -225,34 +233,34 @@ ThingsBoard tb(mqttClient, MAX_MESSAGE_SIZE);
 /// @brief Initalizes WiFi connection,
 // will endlessly delay until a connection has been successfully established
 void InitWiFi() {
-  #if THINGSBOARD_ENABLE_PROGMEM
-    Serial.println(F("Connecting to AP ..."));
-    #else
-      Serial.println("Connecting to AP ...");
-  #endif
+  Serial.println("Attempting to connect to WiFi networks...");
 
-  // Attempting to establish a connection to the given WiFi network
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    // Delay 500ms until a connection has been successfully established
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
-  #if THINGSBOARD_ENABLE_PROGMEM
-      Serial.print(F("."));
-  #else
-      Serial.print(".");
-  #endif
+    if (millis() - lastAttemptTime > 10000) {
+      lastAttemptTime = millis();
+      Serial.printf("Trying SSID: %s\n", secretSSID[currentSSIDIndex]);
+      WiFi.begin(secretSSID[currentSSIDIndex], secretPass[currentSSIDIndex]);
+      currentSSIDIndex = (currentSSIDIndex + 1) % numNetworks;
     }
 
-  #if THINGSBOARD_ENABLE_PROGMEM
-    Serial.println(F("Connected to AP"));
-  #else
-    Serial.println("Connected to AP");
-  #endif
-  #if ENCRYPTED
-    espClient.setCACert(ROOT_CERT);
-  #endif
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Connected to WiFi!");
+      break;
+    } else if (millis() - lastAttemptTime > 10000) {
+      Serial.println("Connection failed... Retrying...");
+    }
+
+    delay(1000); // Wait 1 second before next attempt
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    // Connection successful, print IP address
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Unable to connect to WiFi networks.");
+  }
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 /// @brief Reconnects the WiFi uses InitWiFi if the connection has been removed
@@ -271,17 +279,17 @@ bool reconnect() {
 
 void sendTelemetry(const char* label, const char* key, float data) {
   #if THINGSBOARD_ENABLE_PROGMEM
-    Serial.print(F("Sending "));
     Serial.print(label);
-    Serial.println(F(" data..."));
+    Serial.print(F(" "));
   #else
-    Serial.print("Sending ");
     Serial.print(label);
-    Serial.println(" data...");
+    Serial.print(F(" "));
   #endif
   tb.sendTelemetryData(key, data);
 }
 
+extern float AngleRoll,AnglePitch,AccZ;
+extern double LateLat, LateLn;
 
 void setup() {
   // If analog input pin 0 is unconnected, random analog
@@ -289,11 +297,20 @@ void setup() {
   // different seed numbers each time the sketch runs.
   // randomSeed() will then shuffle the random function.
   // Initalize serial connection for debugging
-  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(200);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(200);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(200);
+  digitalWrite(LED_BUILTIN, HIGH);
 
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(SERIAL_DEBUG_BAUD);
   delay(1000);
+
   InitWiFi();
+
   Wire.setClock(400000);
   Wire.begin(12, 13);
   delay(250);
@@ -302,11 +319,6 @@ void setup() {
   Wire.write(0x00);
   Wire.endTransmission();
 }
-
-
-extern float AngleRoll,AnglePitch;
-extern double LateLat, LateLn;
-
 
 void loop() {
   gyro_signals();
@@ -333,58 +345,24 @@ void loop() {
   #endif
   
   // debugging
-  // Serial.println(sizeof(AnglePitch));
-  // Serial.println(sizeof(AnglePitch));
-  // Serial.println(sizeof(LateLat));
-  // Serial.println(sizeof(LateLn));
+  Serial.println("+++++++++++++++++++++++++++");
+  Serial.println(AnglePitch);
+  Serial.println(AnglePitch);
+  Serial.println(AccZ);
+  if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)){
+    Serial.println("Unsafe orientation detected!");
+  }
+  Serial.println("+++++++++++++++++++++++++++");
 
-    // Uploads new telemetry to ThingsBoard using HTTP.
-    // See https://thingsboard.io/docs/reference/http-api/#telemetry-upload-api
-    // for more details
-      // References
-      // #if THINGSBOARD_ENABLE_PROGMEM
-      //   Serial.println(F("Sending humidity data..."));
-      // #else
-      //   Serial.println("Sending humidity data...");
-      // #endif
-      //   tb.sendTelemetryData(HUMIDITY_KEY, random(1,30));
-
+    Serial.print(F("Sending : "));
     sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
     sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
     sendTelemetry("Lat", LATELAT_KEY, LateLat);
     sendTelemetry("Long", LATELN_KEY, LateLn);
 
-  // #if THINGSBOARD_ENABLE_PROGMEM
-  //   Serial.println(F("Sending Angle Roll data..."));
-  // #else
-  //   Serial.println("Sending Angle Roll data...");
-  // #endif
-  //   tb.sendTelemetryData(ANGLEROLL_KEY, AngleRoll);
-
-  // #if THINGSBOARD_ENABLE_PROGMEM
-  //   Serial.println(F("Sending Angle Pitch data..."));
-  // #else
-  //   Serial.println("Sending Angle Pitch data...");
-  // #endif
-  //   tb.sendTelemetryData(ANGLEPITCH_KEY, AnglePitch);  
-
-  // #if THINGSBOARD_ENABLE_PROGMEM
-  //   Serial.println(F("Sending Lat data..."));
-  // #else
-  //   Serial.println("Sending Lat data...");
-  // #endif
-  //   tb.sendTelemetryData(LATELAT_KEY, LateLat);
-
-  // #if THINGSBOARD_ENABLE_PROGMEM
-  //   Serial.println(F("Sending Long data..."));
-  // #else
-  //   Serial.println("Sending Long data...");
-  // #endif
-  //   tb.sendTelemetryData(LATELN_KEY, LateLn);
-
   #if !USING_HTTPS
     tb.loop();
   #endif
 
-  delay(200);
+  delay(500);
 }

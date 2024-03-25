@@ -19,7 +19,7 @@ TinyGPSPlus gps;
 SoftwareSerial ss(RXPin, TXPin);
 
 void gyro_signals(void) {
-  Serial.println("Reading Gyroscope");
+  Serial.println("\nReading Gyroscope");
   // EN lowpass filter
   Wire.beginTransmission(0x68);
   Wire.write(0x1A);
@@ -86,22 +86,4 @@ void readGPSData() {
     Serial.println("No GPS signal received within 200ms.");
   }
 }
-
-// void readGPSData() {
-//   // This function reads GPS data once
-//   Serial.println("Reading GPS");
-//   ss.begin(GPSBaud);
-//   int updated = 0;
-//   while (updated != 1) {
-//     while (ss.available() > 0) {
-//       gps.encode(ss.read());
-//       if (gps.location.isUpdated()) {
-//         LateLat = gps.location.lat();
-//         LateLn = gps.location.lng();
-//         updated = 1;
-//         Serial.println("gps was updated ");
-//       }
-//     }
-//   }
-// }
 
