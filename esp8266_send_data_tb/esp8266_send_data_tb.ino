@@ -325,6 +325,7 @@ void setup() {
 }
 
 bool send_finish = false ; 
+bool flip = false ;
 
 void loop() {
   gyro_signals();
@@ -355,12 +356,18 @@ void loop() {
   Serial.println(AnglePitch);
   Serial.println(AnglePitch);
   Serial.println(AccZ);
-  if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)){
 
+  if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)) { 
+    flip = true ; // Car fliped
+  }
+  else {
+    flip = false ; // Car normal
+    send_finish = false ;
+  }
+
+  if (flip && !send_finish) {
+    
     Serial.println("Unsafe orientation detected!");
-
-    //if sendstate
-    if (!send_finish) { 
     //Change Lat,Ln into string format
     String LatitudeString = String(LateLat);
     String LongtitudeString = String(LateLn);
@@ -376,6 +383,7 @@ void loop() {
     Line.gmap.zoom = 18;
     Line.gmap.map_type = "satellite"; //roadmap or satellite
     Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
+    LineNotify.send(Line);
 
     if (result.status == LineNotify_Sending_Success) {
       Serial.println("Send notify successful"); 
@@ -384,14 +392,9 @@ void loop() {
     else {
       Serial.println("Send notify fail");
     }
-
-    }
-
-    else {
-      send_finish = false;
-    }
-    
   }
+
+    
   Serial.println("+++++++++++++++++++++++++++");
 
     Serial.print(F("Sending : "));
