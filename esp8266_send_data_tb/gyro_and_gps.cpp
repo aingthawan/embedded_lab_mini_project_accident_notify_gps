@@ -69,7 +69,7 @@ void readGPSData() {
   int updated = 0;
   unsigned long startTime = millis(); // Record the start time
 
-  while (updated != 1 && millis() - startTime < 200) { // Wait for 200ms
+  while (updated != 1 && millis() - startTime < 300) { // Wait for 200ms
     while (ss.available() > 0) {
       gps.encode(ss.read());
       if (gps.location.isUpdated()) {
@@ -83,7 +83,7 @@ void readGPSData() {
   }
 
   if (updated == 0) {
-    Serial.println("No GPS signal received within 200ms.");
+    Serial.println("No GPS signal received within 300ms.");
   }
 }
 

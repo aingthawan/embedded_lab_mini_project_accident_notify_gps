@@ -301,6 +301,7 @@ void setup() {
   // different seed numbers each time the sketch runs.
   // randomSeed() will then shuffle the random function.
   // Initalize serial connection for debugging
+  pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   delay(200);
   digitalWrite(LED_BUILTIN, HIGH);
@@ -309,7 +310,6 @@ void setup() {
   delay(200);
   digitalWrite(LED_BUILTIN, HIGH);
 
-  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(SERIAL_DEBUG_BAUD);
   delay(1000);
 
@@ -369,8 +369,8 @@ void loop() {
     
     Serial.println("Unsafe orientation detected!");
     //Change Lat,Ln into string format
-    String LatitudeString = String(LateLat);
-    String LongtitudeString = String(LateLn);
+    // String LatitudeString = String(LateLat);
+    // String LongtitudeString = String(LateLn);
 
     //Line send notify test.
     /* Define the LineNotifyClient object */
@@ -380,18 +380,21 @@ void loop() {
     Line.reconnect_wifi = true;
     Line.token = LINE_TOKEN;
     Line.message = "Location";
-    Line.gmap.zoom = 18;
-    Line.gmap.map_type = "satellite"; //roadmap or satellite
-    Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
+    // Line.message = LatitudeString;
+    // Line.gmap.zoom = 18;
+    // Line.gmap.map_type = "satellite"; //roadmap or satellite
+    // Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
     LineNotify.send(Line);
+    send_finish = true; 
 
-    if (result.status == LineNotify_Sending_Success) {
-      Serial.println("Send notify successful"); 
-      send_finish = true; 
-    }
-    else {
-      Serial.println("Send notify fail");
-    }
+    // if (result.status == LineNotify_Sending_Success) {
+    //   Serial.println("Send notify successful"); 
+    //   send_finish = true; 
+    // }
+    // else {
+    //   Serial.println("Send notify fail");
+    // }
+    // delay(5000);
   }
 
     
@@ -408,5 +411,5 @@ void loop() {
     tb.loop();
   #endif
 
-  delay(500);
+  delay(1000);
 }
