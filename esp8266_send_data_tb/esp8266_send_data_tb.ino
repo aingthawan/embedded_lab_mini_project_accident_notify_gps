@@ -368,6 +368,7 @@ void loop() {
     //Line send notify test.
     /* Define the LineNotifyClient object */
     LineNotifyClient Line;
+    LineNotifySendingResult result = LineNotify.send(Line);
 
     Line.reconnect_wifi = true;
     Line.token = LINE_TOKEN;
@@ -376,7 +377,7 @@ void loop() {
     Line.gmap.map_type = "satellite"; //roadmap or satellite
     Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
 
-    if (LineNotify.send(Line);) {
+    if (result.status == LineNotify_Sending_Success) {
       Serial.println("Send notify successful"); 
       send_finish = true; 
     }
@@ -385,7 +386,7 @@ void loop() {
     }
 
     }
-    
+
     else {
       send_finish = false;
     }
