@@ -38,6 +38,11 @@
 #include <ThingsBoard.h>
 #endif
 
+
+#include <ESP_Line_Notify.h>
+/* Define the LineNotifyClient object */
+LineNotifyClient Line;
+
 // #define WIFI_SSID        secretSSID[]
 // #define WIFI_PASSWORD    secretPass[]
 extern const char* secretSSID[];
@@ -311,6 +316,20 @@ void setup() {
 
   InitWiFi();
 
+  //Line send notify test.
+
+  Line.reconnect_wifi = true;
+
+  Line.token = LINE_TOKEN;
+
+  Line.message = "Location";
+  Line.gmap.zoom = 18;
+  Line.gmap.map_type = "satellite";          //roadmap or satellite
+  Line.gmap.center = "40.718217,-73.998284"; //Places or Latitude, Longitude
+
+  LineNotify.send(Line);
+
+
   Wire.setClock(400000);
   Wire.begin(12, 13);
   delay(250);
@@ -359,6 +378,12 @@ void loop() {
     sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
     sendTelemetry("Lat", LATELAT_KEY, LateLat);
     sendTelemetry("Long", LATELN_KEY, LateLn);
+    //Change Lat,Ln into string format
+    String LatitudeString = String(LateLat);
+    String LongtitudeString = String(LateLn);
+    //Set lat,ln for gmap
+    Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
+    //LineNotify.send(Line);
 
   #if !USING_HTTPS
     tb.loop();
