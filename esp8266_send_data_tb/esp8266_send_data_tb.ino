@@ -1,3 +1,5 @@
+// #define ESP_LINE_NOTIFY_USE_PSRAM
+
 #include "secret_variable.h"
 #include "gyro_and_gps.h"
 #include <Wire.h>
@@ -324,7 +326,7 @@ void setup() {
 
 bool send_finish = false ; 
 bool flip = false ;
-    LineNotifyClient Line;
+LineNotifyClient Line;
 
 void loop() {
   // Telemetry Check
@@ -393,7 +395,10 @@ void loop() {
     // Line.gmap.zoom = 18;
     // Line.gmap.map_type = "satellite"; //roadmap or satellite
     // Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
+    int start_send = millis();
     LineNotify.send(Line);
+    Serial.print("Line Complete : ");
+    Serial.print(millis() - start_send);
     Serial.println("7");
     send_finish = true; 
 

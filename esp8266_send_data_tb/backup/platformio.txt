@@ -1,0 +1,6 @@
+[env:nodemcu]
+platform = espressif8266
+build_flags = -D PIO_FRAMEWORK_ARDUINO_MMU_EXTERNAL_128K
+board = nodemcu
+framework = arduino
+monitor_speed = 115200
