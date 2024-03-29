@@ -38,9 +38,7 @@
 #include <ThingsBoard.h>
 #endif
 
-
 #include <ESP_Line_Notify.h>
-
 
 // #define WIFI_SSID        secretSSID[]
 // #define WIFI_PASSWORD    secretPass[]
@@ -237,7 +235,7 @@ ThingsBoard tb(mqttClient, MAX_MESSAGE_SIZE);
 /// @brief Initalizes WiFi connection,
 // will endlessly delay until a connection has been successfully established
 void InitWiFi() {
-  Serial.println("Attempting to connect to WiFi networks...");
+  Serial.println("\nAttempting to connect to WiFi networks...");
 
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - lastAttemptTime > 10000) {
@@ -255,6 +253,7 @@ void InitWiFi() {
     }
 
     delay(1000); // Wait 1 second before next attempt
+    
   }
 
   if (WiFi.status() == WL_CONNECTED) {
@@ -295,6 +294,9 @@ void sendTelemetry(const char* label, const char* key, float data) {
 extern float AngleRoll,AnglePitch,AccZ;
 extern double LateLat, LateLn;
 
+// ======================================================
+// ======================================================
+
 void setup() {
   // If analog input pin 0 is unconnected, random analog
   // noise will cause the call to randomSeed() to generate
@@ -309,12 +311,8 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   delay(200);
   digitalWrite(LED_BUILTIN, HIGH);
-
   Serial.begin(SERIAL_DEBUG_BAUD);
-  delay(1000);
-
   InitWiFi();
-
   Wire.setClock(400000);
   Wire.begin(12, 13);
   delay(250);
@@ -326,65 +324,77 @@ void setup() {
 
 bool send_finish = false ; 
 bool flip = false ;
+    LineNotifyClient Line;
 
 void loop() {
-  gyro_signals();
-  readGPSData();
-
-    if (!reconnect()) {
-      return;
-    }
-
+  // Telemetry Check
+  if (!reconnect()) {
+    return;
+  }
   #if !USING_HTTPS
     if (!tb.connected()) {
       // Reconnect to the ThingsBoard server,
       // if a connection was disrupted or has not yet been established
       Serial.printf("Connecting to: (%s) with token (%s)\n", THINGSBOARD_SERVER, THINGS_TOKEN);
       if (!tb.connect(THINGSBOARD_SERVER, THINGS_TOKEN, THINGSBOARD_PORT)) {
-  #if THINGSBOARD_ENABLE_PROGMEM
-        Serial.println(F("Failed to connect"));
-  #else
-        Serial.println("Failed to connect");
-  #endif
-        return;
+        #if THINGSBOARD_ENABLE_PROGMEM
+              Serial.println(F("Failed to connect"));
+        #else
+              Serial.println("Failed to connect");
+        #endif
+      return;
       }
     }
   #endif
   
-  // debugging
-  Serial.println("+++++++++++++++++++++++++++");
-  Serial.println(AnglePitch);
-  Serial.println(AnglePitch);
+  gyro_signals();
+  readGPSData();
+  Serial.print("\nSafty Value : ");
+  Serial.print(AnglePitch);
+  Serial.print(" ");
+  Serial.print(AnglePitch);
+  Serial.print(" ");
   Serial.println(AccZ);
 
+  // Safe Orientation Checker
   if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)) { 
     flip = true ; // Car fliped
+    Serial.println("Unsafe orientation detected!");
   }
   else {
     flip = false ; // Car normal
     send_finish = false ;
+    Serial.println("Normal Orientation");
   }
 
+  // Sequence after filped (execute once)
   if (flip && !send_finish) {
-    
-    Serial.println("Unsafe orientation detected!");
+    Serial.println("Unsafe orientation Sequence!");
     //Change Lat,Ln into string format
     // String LatitudeString = String(LateLat);
     // String LongtitudeString = String(LateLn);
 
     //Line send notify test.
     /* Define the LineNotifyClient object */
-    LineNotifyClient Line;
-    LineNotifySendingResult result = LineNotify.send(Line);
-
+                  // Serial.println("1");
+                  // LineNotifyClient Line;
+                  // Serial.println("2");
+                  // LineNotifySendingResult result = LineNotify.send(Line);
+    // yield();
+    Serial.println("3");
     Line.reconnect_wifi = true;
+    Serial.println("4");
     Line.token = LINE_TOKEN;
+    Serial.println("5");
     Line.message = "Location";
+    Serial.println("6");
+
     // Line.message = LatitudeString;
     // Line.gmap.zoom = 18;
     // Line.gmap.map_type = "satellite"; //roadmap or satellite
     // Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
     LineNotify.send(Line);
+    Serial.println("7");
     send_finish = true; 
 
     // if (result.status == LineNotify_Sending_Success) {
@@ -397,18 +407,15 @@ void loop() {
     // delay(5000);
   }
 
-    
-  Serial.println("+++++++++++++++++++++++++++");
-
-    Serial.print(F("Sending : "));
-    sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
-    sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
-    sendTelemetry("Lat", LATELAT_KEY, LateLat);
-    sendTelemetry("Long", LATELN_KEY, LateLn);
-
-
+  Serial.print(F("\nSending : "));
+  sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
+  sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
+  sendTelemetry("Lat", LATELAT_KEY, LateLat);
+  sendTelemetry("Long", LATELN_KEY, LateLn);
+  Serial.println("\n___________________________");
   #if !USING_HTTPS
     tb.loop();
+    
   #endif
 
   delay(1000);

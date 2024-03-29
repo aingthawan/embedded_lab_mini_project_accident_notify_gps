@@ -19,7 +19,7 @@ TinyGPSPlus gps;
 SoftwareSerial ss(RXPin, TXPin);
 
 void gyro_signals(void) {
-  Serial.println("\nReading Gyroscope");
+  Serial.print("Reading Gyroscope ");
   // EN lowpass filter
   Wire.beginTransmission(0x68);
   Wire.write(0x1A);
@@ -64,7 +64,7 @@ void gyro_signals(void) {
 
 void readGPSData() {
   // This function reads GPS data once
-  Serial.println("Reading GPS");
+  Serial.print("Reading GPS ");
   ss.begin(GPSBaud);
   int updated = 0;
   unsigned long startTime = millis(); // Record the start time
@@ -78,7 +78,7 @@ void readGPSData() {
         updated = 1;
         Serial.println("GPS was updated");
         break; // Exit the inner loop once GPS is updated
-      }
+      } 
     }
   }
 
