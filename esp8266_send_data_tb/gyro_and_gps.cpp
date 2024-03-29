@@ -63,27 +63,24 @@ void gyro_signals(void) {
 }
 
 void readGPSData() {
-  // This function reads GPS data once
-  Serial.print("Reading GPS ");
-  ss.begin(GPSBaud);
-  int updated = 0;
-  unsigned long startTime = millis(); // Record the start time
-
-  while (updated != 1 && millis() - startTime < 300) { // Wait for 200ms
-    while (ss.available() > 0) {
-      gps.encode(ss.read());
-      if (gps.location.isUpdated()) {
-        LateLat = gps.location.lat();
-        LateLn = gps.location.lng();
-        updated = 1;
-        Serial.println("GPS was updated");
-        break; // Exit the inner loop once GPS is updated
-      } 
+    Serial.print("Reading GPS ");
+    ss.begin(GPSBaud);
+    unsigned long startTime = millis();
+    bool updated = false;
+    while (!updated && millis() - startTime < 300) {
+        if (ss.available()) {
+            gps.encode(ss.read());
+            if (gps.location.isUpdated()) {
+                LateLat = gps.location.lat();
+                LateLn = gps.location.lng();
+                updated = true;
+                Serial.println("GPS was updated");
+                break;
+            }
+        }
     }
-  }
-
-  if (updated == 0) {
-    Serial.println("No GPS signal received within 300ms.");
-  }
+    if (!updated) {
+        Serial.println("No GPS signal received within 300ms.");
+    }
 }
 
