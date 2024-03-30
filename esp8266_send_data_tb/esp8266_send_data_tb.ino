@@ -57,6 +57,13 @@ int currentSSIDIndex = 0;
 const float ROLL_THRESHOLD = 45.0;  // Adjust Here
 const float PITCH_THRESHOLD = 45.0; // Adjust Here
 
+extern float AngleRoll,AnglePitch,AccZ;
+extern double LateLat, LateLn;
+
+bool send_finish = false ; 
+bool flip = false ;
+LineNotifyClient Line;
+
 // PROGMEM can only be added when using the ESP32 WiFiClient,
 // will cause a crash if using the ESP8266WiFiSTAClass instead.
 // #if THINGSBOARD_ENABLE_PROGMEM
@@ -293,18 +300,45 @@ void sendTelemetry(const char* label, const char* key, float data) {
   tb.sendTelemetryData(key, data);
 }
 
-extern float AngleRoll,AnglePitch,AccZ;
-extern double LateLat, LateLn;
+void updateOrientationStatus(){
+  if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)) { 
+    flip = true ; // Car fliped
+    Serial.println("Unsafe orientation detected!");
+  }
+  else {
+    flip = false ; // Car normal
+    send_finish = false ;
+    Serial.println("Normal Orientation");
+  }
+}
+
+void flipSequence(){
+  Serial.print("Unsafe orientation Sequence! : ");
+  //Change Lat,Ln into string format
+  String LatitudeString = String(LateLat, 6);
+  String LongtitudeString = String(LateLn, 6);
+  Line.reconnect_wifi = true;
+  Line.token = LINE_TOKEN;
+  Line.message = "Suspect Incident Location : " + LatitudeString + " , " + LongtitudeString;
+  Serial.print("Sending Notify... ");
+  LineNotify.send(Line);
+  
+  // **ISSUE!** =========================================
+  Serial.print("Sending Notify Map... ");
+  Line.gmap.zoom = 18;
+  Line.gmap.map_type = "satellite"; //roadmap or satellite
+  Line.gmap.center = LatitudeString + "," + LongtitudeString; //Places or Latitude, Longitude
+  LineNotify.send(Line);
+  // **ISSUE!** =========================================
+
+  Serial.print("Line Complete : ");
+  send_finish = true; 
+}
 
 // ======================================================
 // ======================================================
 
 void setup() {
-  // If analog input pin 0 is unconnected, random analog
-  // noise will cause the call to randomSeed() to generate
-  // different seed numbers each time the sketch runs.
-  // randomSeed() will then shuffle the random function.
-  // Initalize serial connection for debugging
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   delay(200);
@@ -323,10 +357,6 @@ void setup() {
   Wire.write(0x00);
   Wire.endTransmission();
 }
-
-bool send_finish = false ; 
-bool flip = false ;
-LineNotifyClient Line;
 
 void loop() {
   // Telemetry Check
@@ -348,66 +378,25 @@ void loop() {
       }
     }
   #endif
-  
+  // Update Data
   gyro_signals();
   readGPSData();
-  Serial.print("Safty Value : ");
-  Serial.print(AnglePitch);
-  Serial.print(" ");
-  Serial.print(AnglePitch);
-  Serial.print(" ");
-  Serial.println(AccZ);
-
+  Serial.println("Safty Value : " + String(AnglePitch) + " " + String(AnglePitch) + " " + String(AccZ));
+  // Sending Data
   Serial.print(F("Sending : "));
   sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
   sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
   sendTelemetry("Lat", LATELAT_KEY, LateLat);
   sendTelemetry("Long", LATELN_KEY, LateLn);
   Serial.println("");
-
   // Safe Orientation Checker
-  if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)) { 
-    flip = true ; // Car fliped
-    Serial.println("Unsafe orientation detected!");
-  }
-  else {
-    flip = false ; // Car normal
-    send_finish = false ;
-    Serial.println("Normal Orientation");
-  }
-
+  updateOrientationStatus();
   // Sequence after filped (execute once)
   if (flip && !send_finish) {
-    Serial.print("Unsafe orientation Sequence! : ");
-    //Change Lat,Ln into string format
-    String LatitudeString = String(LateLat);
-    String LongtitudeString = String(LateLn);
-    Serial.print("1 ");
-    Line.reconnect_wifi = true;
-    Serial.print("2 ");
-    Line.token = LINE_TOKEN;
-    Serial.print("3 ");
-    Line.message = "Location";
-    Serial.print("4 ");
-
-    Line.message = LatitudeString;
-    Line.message = LongtitudeString;
-    Line.gmap.zoom = 18;
-    Line.gmap.map_type = "satellite"; //roadmap or satellite
-    Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
-    Serial.print("5 ");
-    int start_send = millis();
-    LineNotify.send(Line);
-    Serial.print("Line Complete : ");
-    Serial.println(millis() - start_send);
-    send_finish = true; 
+    flipSequence();
   }
-
-  Serial.println("\n___________________________");
   #if !USING_HTTPS
     tb.loop();
-    
   #endif
-
-  // delay(1000);
+  Serial.println("___________________________");
 }
