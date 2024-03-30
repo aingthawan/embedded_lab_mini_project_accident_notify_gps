@@ -351,12 +351,19 @@ void loop() {
   
   gyro_signals();
   readGPSData();
-  Serial.print("\nSafty Value : ");
+  Serial.print("Safty Value : ");
   Serial.print(AnglePitch);
   Serial.print(" ");
   Serial.print(AnglePitch);
   Serial.print(" ");
   Serial.println(AccZ);
+
+  Serial.print(F("Sending : "));
+  sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
+  sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
+  sendTelemetry("Lat", LATELAT_KEY, LateLat);
+  sendTelemetry("Long", LATELN_KEY, LateLn);
+  Serial.println("");
 
   // Safe Orientation Checker
   if (abs(AngleRoll) > ROLL_THRESHOLD || abs(AnglePitch) > PITCH_THRESHOLD || (AccZ <= -0.7)) { 
@@ -371,57 +378,36 @@ void loop() {
 
   // Sequence after filped (execute once)
   if (flip && !send_finish) {
-    Serial.println("Unsafe orientation Sequence!");
+    Serial.print("Unsafe orientation Sequence! : ");
     //Change Lat,Ln into string format
-    // String LatitudeString = String(LateLat);
-    // String LongtitudeString = String(LateLn);
-
-    //Line send notify test.
-    /* Define the LineNotifyClient object */
-                  // Serial.println("1");
-                  // LineNotifyClient Line;
-                  // Serial.println("2");
-                  // LineNotifySendingResult result = LineNotify.send(Line);
-    // yield();
-    Serial.println("3");
+    String LatitudeString = String(LateLat);
+    String LongtitudeString = String(LateLn);
+    Serial.print("1 ");
     Line.reconnect_wifi = true;
-    Serial.println("4");
+    Serial.print("2 ");
     Line.token = LINE_TOKEN;
-    Serial.println("5");
+    Serial.print("3 ");
     Line.message = "Location";
-    Serial.println("6");
+    Serial.print("4 ");
 
-    // Line.message = LatitudeString;
-    // Line.gmap.zoom = 18;
-    // Line.gmap.map_type = "satellite"; //roadmap or satellite
-    // Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
+    Line.message = LatitudeString;
+    Line.message = LongtitudeString;
+    Line.gmap.zoom = 18;
+    Line.gmap.map_type = "satellite"; //roadmap or satellite
+    Line.gmap.center = LatitudeString+","+LongtitudeString; //Places or Latitude, Longitude
+    Serial.print("5 ");
     int start_send = millis();
     LineNotify.send(Line);
     Serial.print("Line Complete : ");
-    Serial.print(millis() - start_send);
-    Serial.println("7");
+    Serial.println(millis() - start_send);
     send_finish = true; 
-
-    // if (result.status == LineNotify_Sending_Success) {
-    //   Serial.println("Send notify successful"); 
-    //   send_finish = true; 
-    // }
-    // else {
-    //   Serial.println("Send notify fail");
-    // }
-    // delay(5000);
   }
 
-  Serial.print(F("\nSending : "));
-  sendTelemetry("Angle Roll", ANGLEROLL_KEY, AngleRoll);
-  sendTelemetry("Angle Pitch", ANGLEPITCH_KEY, AnglePitch);
-  sendTelemetry("Lat", LATELAT_KEY, LateLat);
-  sendTelemetry("Long", LATELN_KEY, LateLn);
   Serial.println("\n___________________________");
   #if !USING_HTTPS
     tb.loop();
     
   #endif
 
-  delay(1000);
+  // delay(1000);
 }
