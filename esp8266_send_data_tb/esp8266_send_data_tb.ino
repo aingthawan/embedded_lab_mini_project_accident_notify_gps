@@ -1,5 +1,3 @@
-// #define ESP_LINE_NOTIFY_USE_PSRAM
-
 #include "secret_variable.h"
 #include "gyro_and_gps.h"
 #include <Wire.h>
@@ -321,33 +319,43 @@ void flipSequence(){
   Line.token = LINE_TOKEN;
   Line.message = "Suspect Incident Location : " + LatitudeString + " , " + LongtitudeString;
   Serial.print("Sending Notify... ");
-  LineNotify.send(Line);
   
   // **ISSUE!** =========================================
-  Serial.print("Sending Notify Map... ");
-  Line.gmap.zoom = 18;
+  // Serial.print("Sending Notify Map... ");
+  Line.gmap.zoom = 20;
   Line.gmap.map_type = "satellite"; //roadmap or satellite
   Line.gmap.center = LatitudeString + "," + LongtitudeString; //Places or Latitude, Longitude
+  delay(20);
+  ESP.wdtDisable();
   LineNotify.send(Line);
+  ESP.wdtEnable(WDTO_8S);
+  ESP.wdtFeed(); 
   // **ISSUE!** =========================================
 
-  Serial.print("Line Complete : ");
+  Serial.print("Line Complete!");
   send_finish = true; 
 }
+
+void blinker(int interval, int times) {
+  for (int i = 0; i <= times; i++) {
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(interval);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(interval);
+  }
+}
+
 
 // ======================================================
 // ======================================================
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(200);
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(200);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(200);
-  digitalWrite(LED_BUILTIN, HIGH);
+  ESP.wdtDisable();
+  ESP.wdtEnable(WDTO_8S); //WDTO_8S → https://github.com/esp8266/Arduino/blob/master/cores/esp8266/Esp.h
+
   Serial.begin(SERIAL_DEBUG_BAUD);
+  pinMode(LED_BUILTIN, OUTPUT);
+  blinker(100, 3);
   InitWiFi();
   Wire.setClock(400000);
   Wire.begin(12, 13);
@@ -359,25 +367,25 @@ void setup() {
 }
 
 void loop() {
+  Serial.print(F("Free Heap : "));
+  Serial.println(String(ESP.getFreeHeap()));
   // Telemetry Check
   if (!reconnect()) {
     return;
   }
-  #if !USING_HTTPS
-    if (!tb.connected()) {
-      // Reconnect to the ThingsBoard server,
-      // if a connection was disrupted or has not yet been established
-      Serial.printf("Connecting to: (%s) with token (%s)\n", THINGSBOARD_SERVER, THINGS_TOKEN);
-      if (!tb.connect(THINGSBOARD_SERVER, THINGS_TOKEN, THINGSBOARD_PORT)) {
-        #if THINGSBOARD_ENABLE_PROGMEM
-              Serial.println(F("Failed to connect"));
-        #else
-              Serial.println("Failed to connect");
-        #endif
-      return;
-      }
+  if (!tb.connected()) {
+    // Reconnect to the ThingsBoard server,
+    // if a connection was disrupted or has not yet been established
+    Serial.printf("Connecting to: (%s) with token (%s)\n", THINGSBOARD_SERVER, THINGS_TOKEN);
+    if (!tb.connect(THINGSBOARD_SERVER, THINGS_TOKEN, THINGSBOARD_PORT)) {
+      #if THINGSBOARD_ENABLE_PROGMEM
+            Serial.println(F("Failed to connect"));
+      #else
+            Serial.println("Failed to connect");
+      #endif
+    return;
     }
-  #endif
+  }
   // Update Data
   gyro_signals();
   readGPSData();
@@ -395,8 +403,6 @@ void loop() {
   if (flip && !send_finish) {
     flipSequence();
   }
-  #if !USING_HTTPS
-    tb.loop();
-  #endif
-  Serial.println("___________________________");
+  tb.loop();
+  Serial.println("\n___________________________");
 }

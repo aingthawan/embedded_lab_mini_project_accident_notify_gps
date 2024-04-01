@@ -11,12 +11,38 @@ float LoopTimer;
 static const int RXPin = 4, TXPin = 5;
 static const uint32_t GPSBaud = 9600;
 double LateLat, LateLn;
+int waitTimeGPS = 400;
 
 // The TinyGPS++ object
 TinyGPSPlus gps;
 
 // The serial connection to the GPS device
 SoftwareSerial ss(RXPin, TXPin);
+
+
+void readGPSData() {
+    Serial.print("Reading GPS ");
+    ss.begin(GPSBaud);
+    unsigned long startTime = millis();
+    bool updated = false;
+    while (!updated && millis() - startTime < waitTimeGPS) {
+        if (ss.available()) {
+            gps.encode(ss.read());
+            if (gps.location.isUpdated()) {
+                LateLat = gps.location.lat();
+                LateLn = gps.location.lng();
+                updated = true;
+                Serial.println("GPS was updated");
+                waitTimeGPS = 1000;
+                break;
+            }
+        }
+    }
+    if (!updated) {
+        Serial.println("No GPS signal received within 400ms.");
+        waitTimeGPS = 400;
+    }
+}
 
 void gyro_signals(void) {
   Serial.print("Reading Gyroscope ");
@@ -60,27 +86,5 @@ void gyro_signals(void) {
   // Angle Measurement
   AngleRoll=atan( AccY / sqrt(AccX*AccX + AccZ*AccZ))*1 / (3.142/180);
   AnglePitch=atan( AccX / sqrt(AccY*AccY + AccZ*AccZ))*1 / (3.142/180);
-}
-
-void readGPSData() {
-    Serial.print("Reading GPS ");
-    ss.begin(GPSBaud);
-    unsigned long startTime = millis();
-    bool updated = false;
-    while (!updated && millis() - startTime < 400) {
-        if (ss.available()) {
-            gps.encode(ss.read());
-            if (gps.location.isUpdated()) {
-                LateLat = gps.location.lat();
-                LateLn = gps.location.lng();
-                updated = true;
-                Serial.println("GPS was updated");
-                break;
-            }
-        }
-    }
-    if (!updated) {
-        Serial.println("No GPS signal received within 400ms.");
-    }
 }
 
