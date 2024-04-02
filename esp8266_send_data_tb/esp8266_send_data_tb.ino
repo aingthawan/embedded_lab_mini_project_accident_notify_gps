@@ -244,8 +244,14 @@ ThingsBoard tb(mqttClient, MAX_MESSAGE_SIZE);
 void InitWiFi() {
   Serial.println("\nAttempting to connect to WiFi networks...");
 
+  unsigned long lastAttemptTime = 0;
+  int currentSSIDIndex = 0;
+  const int connectionTimeout = 10000; // 10 seconds
+  const int numNetworks = 3; // 3 networks
+
+  WiFi.begin(secretSSID[currentSSIDIndex], secretPass[currentSSIDIndex]);
   while (WiFi.status() != WL_CONNECTED) {
-    if (millis() - lastAttemptTime > 10000) {
+    if (millis() - lastAttemptTime > connectionTimeout) {
       lastAttemptTime = millis();
       Serial.printf("Trying SSID: %s\n", secretSSID[currentSSIDIndex]);
       WiFi.begin(secretSSID[currentSSIDIndex], secretPass[currentSSIDIndex]);
@@ -253,14 +259,13 @@ void InitWiFi() {
     }
 
     if (WiFi.status() == WL_CONNECTED) {
-      Serial.println("Connected to WiFi!");
+      Serial.println("\nConnected to WiFi!");
       break;
-    } else if (millis() - lastAttemptTime > 10000) {
-      Serial.println("Connection failed... Retrying...");
+    } else {
+      Serial.print(". ");
     }
 
     delay(1000); // Wait 1 second before next attempt
-    
   }
 
   if (WiFi.status() == WL_CONNECTED) {
@@ -270,7 +275,6 @@ void InitWiFi() {
   } else {
     Serial.println("Unable to connect to WiFi networks.");
   }
-  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 /// @brief Reconnects the WiFi uses InitWiFi if the connection has been removed
@@ -315,22 +319,21 @@ void flipSequence(){
   //Change Lat,Ln into string format
   String LatitudeString = String(LateLat, 6);
   String LongtitudeString = String(LateLn, 6);
-  Line.reconnect_wifi = true;
-  Line.token = LINE_TOKEN;
+  // Line.reconnect_wifi = true;
+  // Line.token = LINE_TOKEN;
   Line.message = "Suspect Incident Location : " + LatitudeString + " , " + LongtitudeString;
-  Serial.print("Sending Notify... ");
   
   // **ISSUE!** =========================================
   // Serial.print("Sending Notify Map... ");
   Line.gmap.zoom = 20;
   Line.gmap.map_type = "satellite"; //roadmap or satellite
   Line.gmap.center = LatitudeString + "," + LongtitudeString; //Places or Latitude, Longitude
-  delay(20);
+  // **ISSUE!** =========================================
+  Serial.print("Sending Notify... ");
   ESP.wdtDisable();
   LineNotify.send(Line);
   ESP.wdtEnable(WDTO_8S);
   ESP.wdtFeed(); 
-  // **ISSUE!** =========================================
 
   Serial.print("Line Complete!");
   send_finish = true; 
@@ -344,7 +347,6 @@ void blinker(int interval, int times) {
     delay(interval);
   }
 }
-
 
 // ======================================================
 // ======================================================
@@ -364,6 +366,9 @@ void setup() {
   Wire.write(0x6B);
   Wire.write(0x00);
   Wire.endTransmission();
+
+  Line.reconnect_wifi = true;
+  Line.token = LINE_TOKEN;
 }
 
 void loop() {
