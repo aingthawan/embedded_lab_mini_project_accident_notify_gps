@@ -32,20 +32,20 @@ void readGPSData() {
                 LateLat = gps.location.lat();
                 LateLn = gps.location.lng();
                 updated = true;
-                Serial.println("GPS was updated");
+                Serial.println(F("GPS was updated"));
                 waitTimeGPS = 1000;
                 break;
             }
         }
     }
     if (!updated) {
-        Serial.println("No GPS signal received within 400ms.");
+        Serial.println(F("No GPS signal received within 400ms."));
         waitTimeGPS = 400;
     }
 }
 
 void gyro_signals(void) {
-  Serial.print("Reading Gyroscope ");
+  Serial.print(F("Reading Gyroscope "));
   // EN lowpass filter
   Wire.beginTransmission(0x68);
   Wire.write(0x1A);

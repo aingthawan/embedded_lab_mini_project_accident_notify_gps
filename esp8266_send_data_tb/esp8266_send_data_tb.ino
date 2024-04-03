@@ -241,7 +241,7 @@ ThingsBoard tb(mqttClient, MAX_MESSAGE_SIZE);
 
 /// @brief Initalizes WiFi connection,
 // will endlessly delay until a connection has been successfully established
-void InitWiFi() {
+ICACHE_FLASH_ATTR void InitWiFi() {
   Serial.println("\nAttempting to connect to WiFi networks...");
 
   unsigned long lastAttemptTime = 0;
@@ -314,8 +314,8 @@ void updateOrientationStatus(){
   }
 }
 
-void flipSequence(){
-  Serial.print("Unsafe orientation Sequence! : ");
+ICACHE_FLASH_ATTR void flipSequence(){
+  Serial.print(F("Unsafe orientation Sequence! : "));
   //Change Lat,Ln into string format
   String LatitudeString = String(LateLat, 6);
   String LongtitudeString = String(LateLn, 6);
@@ -329,17 +329,23 @@ void flipSequence(){
   Line.gmap.map_type = "satellite"; //roadmap or satellite
   Line.gmap.center = LatitudeString + "," + LongtitudeString; //Places or Latitude, Longitude
   // **ISSUE!** =========================================
-  Serial.print("Sending Notify... ");
+  Serial.print(F("Sending Notify... "));
   ESP.wdtDisable();
+  // int rest_start = millis();
+  // while (millis() - rest_start <= 50){
+  //   // Serial.print(F("Free Heap : "));
+  //   // Serial.println(ESP.getFreeHeap(),DEC);
+  //   yield();
+  // }
   LineNotify.send(Line);
   ESP.wdtEnable(WDTO_8S);
   ESP.wdtFeed(); 
 
-  Serial.print("Line Complete!");
+  Serial.print(F("Line Complete!"));
   send_finish = true; 
 }
 
-void blinker(int interval, int times) {
+ICACHE_FLASH_ATTR void blinker(int interval, int times) {
   for (int i = 0; i <= times; i++) {
     digitalWrite(LED_BUILTIN, LOW);
     delay(interval);
@@ -373,7 +379,7 @@ void setup() {
 
 void loop() {
   Serial.print(F("Free Heap : "));
-  Serial.println(String(ESP.getFreeHeap()));
+  Serial.println(ESP.getFreeHeap(),DEC);
   // Telemetry Check
   if (!reconnect()) {
     return;
